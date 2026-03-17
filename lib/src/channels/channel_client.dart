@@ -33,6 +33,15 @@ class ChannelClient {
     );
   }
 
+  ///yfq修改原始数据返回
+  Future<ChannelPage> customGet(dynamic id) async {
+    id = ChannelId.fromString(id);
+    final channelPage = await ChannelPage.get(_httpClient, id.value);
+    return channelPage;
+  }
+
+  ///yfq修改原始数据返回----
+
   /// Gets the metadata associated with the channel of the specified user.
   /// [username] must be either a [Username] or a string
   /// which is parsed to a [Username]
@@ -98,8 +107,10 @@ class ChannelClient {
   Future<ChannelAbout> getAboutPageByUsername(dynamic username) async {
     username = Username.fromString(username);
 
-    final page =
-        await ChannelAboutPage.getByUsername(_httpClient, username.value);
+    final page = await ChannelAboutPage.getByUsername(
+      _httpClient,
+      username.value,
+    );
 
     return ChannelAbout(
       page.description,

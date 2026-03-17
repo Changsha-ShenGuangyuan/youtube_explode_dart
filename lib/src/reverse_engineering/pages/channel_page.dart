@@ -1,3 +1,4 @@
+import 'package:html/dom.dart';
 import 'package:html/parser.dart' as parser;
 
 import '../../exceptions/exceptions.dart';
@@ -9,6 +10,11 @@ import '../youtube_http_client.dart';
 
 ///
 class ChannelPage extends YoutubePage<_InitialData> {
+  ///yfq修改增加原始数据返回
+  JsonMap get rawMap => initialData.root;
+
+  ///yfq修改增加原始数据返回---
+
   ///
   bool get isOk => root!.querySelector('meta[property="og:url"]') != null;
 

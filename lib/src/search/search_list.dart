@@ -14,6 +14,10 @@ class SearchList extends BasePagedList<SearchResult> {
   /// See [SearchList]
   SearchList(super.base, this._page, this._httpClient);
 
+  ///yfq 修改增加歌单获取频道id信息
+  String channelIdForPlaylist(String playlistId) =>
+      _page.channelIdForPlaylist(playlistId);
+
   /// Fetches the next batch of videos or returns null if there are no more
   /// results.
   @override

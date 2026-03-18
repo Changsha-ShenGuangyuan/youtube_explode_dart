@@ -32,6 +32,14 @@ class PlaylistClient {
     );
   }
 
+  Future<PlaylistPage> customGet(dynamic id) async {
+    id = PlaylistId.fromString(id);
+
+    final response =
+        await PlaylistPage.get(_httpClient, (id as PlaylistId).value);
+    return response;
+  }
+
   /// Enumerates videos included in the specified playlist.
   Stream<Video> getVideos(dynamic id) async* {
     id = PlaylistId.fromString(id);

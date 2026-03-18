@@ -23,6 +23,8 @@ class PlaylistPage extends YoutubePage<_InitialData> {
 
   late final String? author = initialData.author;
 
+  late final String? authorChannelId = initialData.authorChannelId;
+
   late final int? viewCount = initialData.viewCount;
 
   late final int? videoCount = initialData.videoCount;
@@ -126,6 +128,22 @@ class _InitialData extends InitialData {
       ?.getT<List<dynamic>>('runs')
       ?.cast<Map<dynamic, dynamic>>()
       .parseRuns();
+
+  late final String? authorChannelId = root
+      .get('sidebar')
+      ?.get('playlistSidebarRenderer')
+      ?.getList('items')
+      ?.elementAtSafe(1)
+      ?.get('playlistSidebarSecondaryInfoRenderer')
+      ?.get('videoOwner')
+      ?.get('videoOwnerRenderer')
+      ?.get('title')
+      ?.getT<List<dynamic>>('runs')
+      ?.cast<Map<String, dynamic>>()
+      .firstOrNull
+      ?.get('navigationEndpoint')
+      ?.get('browseEndpoint')
+      ?.getT<String>('browseId');
 
   late final String? description = root
       .get('metadata')

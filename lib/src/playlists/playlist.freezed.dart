@@ -1,6 +1,5 @@
-// dart format width=80
-// coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
@@ -38,6 +37,11 @@ mixin _$Playlist {
   /// Total videos in this playlist.
   int? get videoCount;
 
+  /// Playlist cover thumbnails parsed directly from YouTube.
+  /// Unlike [thumbnails] which is derived from the first video,
+  /// this contains the actual playlist cover images.
+  List<Thumbnail>? get playlistThumbnails;
+
   /// Create a copy of Playlist
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -60,16 +64,26 @@ mixin _$Playlist {
             (identical(other.engagement, engagement) ||
                 other.engagement == engagement) &&
             (identical(other.videoCount, videoCount) ||
-                other.videoCount == videoCount));
+                other.videoCount == videoCount) &&
+            const DeepCollectionEquality()
+                .equals(other.playlistThumbnails, playlistThumbnails));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, title, author, description,
-      thumbnails, engagement, videoCount);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      title,
+      author,
+      description,
+      thumbnails,
+      engagement,
+      videoCount,
+      const DeepCollectionEquality().hash(playlistThumbnails));
 
   @override
   String toString() {
-    return 'Playlist(id: $id, title: $title, author: $author, description: $description, thumbnails: $thumbnails, engagement: $engagement, videoCount: $videoCount)';
+    return 'Playlist(id: $id, title: $title, author: $author, description: $description, thumbnails: $thumbnails, engagement: $engagement, videoCount: $videoCount, playlistThumbnails: $playlistThumbnails)';
   }
 }
 
@@ -85,7 +99,8 @@ abstract mixin class $PlaylistCopyWith<$Res> {
       String description,
       ThumbnailSet thumbnails,
       Engagement engagement,
-      int? videoCount});
+      int? videoCount,
+      List<Thumbnail>? playlistThumbnails});
 
   $PlaylistIdCopyWith<$Res> get id;
   $ThumbnailSetCopyWith<$Res> get thumbnails;
@@ -111,6 +126,7 @@ class _$PlaylistCopyWithImpl<$Res> implements $PlaylistCopyWith<$Res> {
     Object? thumbnails = null,
     Object? engagement = null,
     Object? videoCount = freezed,
+    Object? playlistThumbnails = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -141,6 +157,10 @@ class _$PlaylistCopyWithImpl<$Res> implements $PlaylistCopyWith<$Res> {
           ? _self.videoCount
           : videoCount // ignore: cast_nullable_to_non_nullable
               as int?,
+      playlistThumbnails: freezed == playlistThumbnails
+          ? _self.playlistThumbnails
+          : playlistThumbnails // ignore: cast_nullable_to_non_nullable
+              as List<Thumbnail>?,
     ));
   }
 
@@ -175,12 +195,222 @@ class _$PlaylistCopyWithImpl<$Res> implements $PlaylistCopyWith<$Res> {
   }
 }
 
+/// Adds pattern-matching-related methods to [Playlist].
+extension PlaylistPatterns on Playlist {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_Playlist value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_Playlist value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist():
+        return $default(_that);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_Playlist value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            PlaylistId id,
+            String title,
+            String author,
+            String description,
+            ThumbnailSet thumbnails,
+            Engagement engagement,
+            int? videoCount,
+            List<Thumbnail>? playlistThumbnails)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist() when $default != null:
+        return $default(
+            _that.id,
+            _that.title,
+            _that.author,
+            _that.description,
+            _that.thumbnails,
+            _that.engagement,
+            _that.videoCount,
+            _that.playlistThumbnails);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            PlaylistId id,
+            String title,
+            String author,
+            String description,
+            ThumbnailSet thumbnails,
+            Engagement engagement,
+            int? videoCount,
+            List<Thumbnail>? playlistThumbnails)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist():
+        return $default(
+            _that.id,
+            _that.title,
+            _that.author,
+            _that.description,
+            _that.thumbnails,
+            _that.engagement,
+            _that.videoCount,
+            _that.playlistThumbnails);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            PlaylistId id,
+            String title,
+            String author,
+            String description,
+            ThumbnailSet thumbnails,
+            Engagement engagement,
+            int? videoCount,
+            List<Thumbnail>? playlistThumbnails)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _Playlist() when $default != null:
+        return $default(
+            _that.id,
+            _that.title,
+            _that.author,
+            _that.description,
+            _that.thumbnails,
+            _that.engagement,
+            _that.videoCount,
+            _that.playlistThumbnails);
+      case _:
+        return null;
+    }
+  }
+}
+
 /// @nodoc
 
 class _Playlist extends Playlist {
   const _Playlist(this.id, this.title, this.author, this.description,
-      this.thumbnails, this.engagement, this.videoCount)
-      : super._();
+      this.thumbnails, this.engagement, this.videoCount,
+      {final List<Thumbnail>? playlistThumbnails})
+      : _playlistThumbnails = playlistThumbnails,
+        super._();
 
   /// Playlist ID.
   @override
@@ -212,6 +442,24 @@ class _Playlist extends Playlist {
   @override
   final int? videoCount;
 
+  /// Playlist cover thumbnails parsed directly from YouTube.
+  /// Unlike [thumbnails] which is derived from the first video,
+  /// this contains the actual playlist cover images.
+  final List<Thumbnail>? _playlistThumbnails;
+
+  /// Playlist cover thumbnails parsed directly from YouTube.
+  /// Unlike [thumbnails] which is derived from the first video,
+  /// this contains the actual playlist cover images.
+  @override
+  List<Thumbnail>? get playlistThumbnails {
+    final value = _playlistThumbnails;
+    if (value == null) return null;
+    if (_playlistThumbnails is EqualUnmodifiableListView)
+      return _playlistThumbnails;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   /// Create a copy of Playlist
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -235,16 +483,26 @@ class _Playlist extends Playlist {
             (identical(other.engagement, engagement) ||
                 other.engagement == engagement) &&
             (identical(other.videoCount, videoCount) ||
-                other.videoCount == videoCount));
+                other.videoCount == videoCount) &&
+            const DeepCollectionEquality()
+                .equals(other._playlistThumbnails, _playlistThumbnails));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, title, author, description,
-      thumbnails, engagement, videoCount);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      title,
+      author,
+      description,
+      thumbnails,
+      engagement,
+      videoCount,
+      const DeepCollectionEquality().hash(_playlistThumbnails));
 
   @override
   String toString() {
-    return 'Playlist(id: $id, title: $title, author: $author, description: $description, thumbnails: $thumbnails, engagement: $engagement, videoCount: $videoCount)';
+    return 'Playlist(id: $id, title: $title, author: $author, description: $description, thumbnails: $thumbnails, engagement: $engagement, videoCount: $videoCount, playlistThumbnails: $playlistThumbnails)';
   }
 }
 
@@ -262,7 +520,8 @@ abstract mixin class _$PlaylistCopyWith<$Res>
       String description,
       ThumbnailSet thumbnails,
       Engagement engagement,
-      int? videoCount});
+      int? videoCount,
+      List<Thumbnail>? playlistThumbnails});
 
   @override
   $PlaylistIdCopyWith<$Res> get id;
@@ -291,6 +550,7 @@ class __$PlaylistCopyWithImpl<$Res> implements _$PlaylistCopyWith<$Res> {
     Object? thumbnails = null,
     Object? engagement = null,
     Object? videoCount = freezed,
+    Object? playlistThumbnails = freezed,
   }) {
     return _then(_Playlist(
       null == id
@@ -321,6 +581,10 @@ class __$PlaylistCopyWithImpl<$Res> implements _$PlaylistCopyWith<$Res> {
           ? _self.videoCount
           : videoCount // ignore: cast_nullable_to_non_nullable
               as int?,
+      playlistThumbnails: freezed == playlistThumbnails
+          ? _self._playlistThumbnails
+          : playlistThumbnails // ignore: cast_nullable_to_non_nullable
+              as List<Thumbnail>?,
     ));
   }
 

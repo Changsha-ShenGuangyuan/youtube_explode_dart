@@ -31,8 +31,13 @@ abstract class Playlist with _$Playlist {
     Engagement engagement,
 
     /// Total videos in this playlist.
-    int? videoCount,
-  ) = _Playlist;
+    int? videoCount, {
+
+    /// Playlist cover thumbnails parsed directly from YouTube.
+    /// Unlike [thumbnails] which is derived from the first video,
+    /// this contains the actual playlist cover images.
+    List<Thumbnail>? playlistThumbnails,
+  }) = _Playlist;
 
   const Playlist._();
 

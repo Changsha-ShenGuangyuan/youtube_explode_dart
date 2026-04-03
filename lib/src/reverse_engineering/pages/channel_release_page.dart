@@ -45,8 +45,7 @@ class ChannelReleasePage extends YoutubePage<_InitialData> {
     YoutubeHttpClient httpClient,
     String channelId,
   ) {
-    final url =
-        'https://www.youtube.com/channel/$channelId/releases?hl=en';
+    final url = 'https://www.youtube.com/channel/$channelId/releases?hl=en';
     return retry(httpClient, () async {
       final raw = await httpClient.getString(url);
       return ChannelReleasePage.parse(raw, channelId);
@@ -83,8 +82,7 @@ class _InitialData extends InitialData {
     }
 
     // Continuation page: data comes from the API response.
-    if (context == null &&
-        root.containsKey('onResponseReceivedActions')) {
+    if (context == null && root.containsKey('onResponseReceivedActions')) {
       context = root
           .getList('onResponseReceivedActions')
           ?.firstOrNull
@@ -137,17 +135,28 @@ class _InitialData extends InitialData {
         continue;
       }
 
-      final String? playlistId =
-          playlistRenderer.getT<String>('playlistId');
+      final String? playlistId = playlistRenderer.getT<String>('playlistId');
       final String? title =
           playlistRenderer.getJson<String>('title/simpleText');
       final int videoCount =
-          playlistRenderer.getT<String>('videoCount')?.parseInt() ??
-              0;
-      final String? author = playlistRenderer
-          .getJson<String>('shortBylineText/runs/0/text');
+          playlistRenderer.getT<String>('videoCount')?.parseInt() ?? 0;
+      final String? author =
+          playlistRenderer.getJson<String>('shortBylineText/runs/0/text');
       final String? videoId = playlistRenderer
           .getJson<String>('videos/0/childVideoRenderer/videoId');
+
+      final playlistThumbnails = playlistRenderer
+          .getJson<List<dynamic>>(
+              'thumbnailRenderer/playlistCustomThumbnailRenderer/thumbnail/thumbnails')
+          ?.cast<Map<String, dynamic>>()
+          .map(
+            (e) => Thumbnail(
+              Uri.parse(e['url'] as String),
+              e['height'] as int,
+              e['width'] as int,
+            ),
+          )
+          .toList();
 
       if (videoId == null ||
           title == null ||
@@ -167,6 +176,7 @@ class _InitialData extends InitialData {
           ThumbnailSet(videoId),
           Engagement(videoCount, null, null),
           videoCount,
+          playlistThumbnails: playlistThumbnails,
         ),
       );
     }

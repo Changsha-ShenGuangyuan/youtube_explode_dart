@@ -163,6 +163,21 @@ class _InitialData extends InitialData {
         'innertubeCommand/watchEndpoint/videoId',
       );
 
+      final playlistThumbnails = viewModel
+          .getJson<List<dynamic>>(
+            'contentImage/collectionThumbnailViewModel/'
+            'primaryThumbnail/thumbnailViewModel/image/sources',
+          )
+          ?.cast<Map<String, dynamic>>()
+          .map(
+            (e) => Thumbnail(
+              Uri.parse(e['url'] as String),
+              e['height'] as int,
+              e['width'] as int,
+            ),
+          )
+          .toList();
+
       if (videoId == null ||
           title == null ||
           playlistId == null ||
@@ -181,6 +196,7 @@ class _InitialData extends InitialData {
           ThumbnailSet(videoId),
           Engagement(videoCount, null, null),
           videoCount,
+          playlistThumbnails: playlistThumbnails,
         ),
       );
     }

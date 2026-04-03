@@ -63,6 +63,14 @@ class ChannelPage extends YoutubePage<_InitialData> {
         //         .toList() ??
         //     [];
 
+        final playlistThumbnails = viewModel
+            .getJson<List<dynamic>>(
+                'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/image/sources')
+            ?.cast<Map<String, dynamic>>()
+            .map((e) => Thumbnail(
+                Uri.parse(e['url'] as String), e['height'] as int, e['width'] as int))
+            .toList();
+
         int videoCount = viewModel
                 .getJson<String>(
                     'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/overlays/0/thumbnailOverlayBadgeViewModel/thumbnailBadges/0/thumbnailBadgeViewModel/text')
@@ -89,6 +97,7 @@ class ChannelPage extends YoutubePage<_InitialData> {
           ThumbnailSet(videoId),
           Engagement(videoCount, null, null),
           videoCount,
+          playlistThumbnails: playlistThumbnails,
         );
 
         playlists.add(playlist);
@@ -138,6 +147,15 @@ class ChannelPage extends YoutubePage<_InitialData> {
         //         .toList() ??
         //     [];
 
+        final playlistThumbnails = playlistRenderer
+            .getJson<List<dynamic>>('thumbnails/0/thumbnails')
+            ?.cast<Map<String, dynamic>>()
+            .map((e) => Thumbnail(
+                Uri.parse(e['url'] as String),
+                e['height'] as int,
+                e['width'] as int))
+            .toList();
+
         int videoCount =
             playlistRenderer.getT<String>('videoCount')?.parseInt() ?? 0;
         String? author =
@@ -163,6 +181,7 @@ class ChannelPage extends YoutubePage<_InitialData> {
           ThumbnailSet(videoId),
           Engagement(videoCount, null, null),
           videoCount,
+          playlistThumbnails: playlistThumbnails,
         );
 
         playlists.add(playlist);

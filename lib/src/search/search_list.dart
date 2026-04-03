@@ -18,6 +18,10 @@ class SearchList extends BasePagedList<SearchResult> {
   String channelIdForPlaylist(String playlistId) =>
       _page.channelIdForPlaylist(playlistId);
 
+  ///yfq 修改增加歌单获取作者名信息
+  String authorNameForPlaylist(String playlistId) =>
+      _page.authorNameForPlaylist(playlistId);
+
   /// Fetches the next batch of videos or returns null if there are no more
   /// results.
   @override

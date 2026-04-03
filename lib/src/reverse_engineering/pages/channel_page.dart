@@ -1,6 +1,7 @@
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as parser;
 
+import '../../../youtube_explode_dart.dart';
 import '../../exceptions/exceptions.dart';
 import '../../extensions/helpers_extension.dart';
 import '../../retry.dart';
@@ -14,6 +15,204 @@ class ChannelPage extends YoutubePage<_InitialData> {
   JsonMap get rawMap => initialData.root;
 
   ///yfq修改增加原始数据返回---
+
+  ///yfq 解析歌单列表数据
+  List<Playlist> get playlists {
+    var playlistContents = rawMap
+        .get('contents')
+        ?.get('twoColumnBrowseResultsRenderer')
+        ?.getList('tabs')
+        ?.firstWhere((e) => e['tabRenderer']?['title'] == 'Playlists',
+            orElse: () => {})
+        .get('tabRenderer')
+        ?.get('content')
+        ?.get('sectionListRenderer')
+        ?.getList('contents')
+        ?.firstOrNull
+        ?.get('itemSectionRenderer')
+        ?.getList('contents')
+        ?.firstOrNull
+        ?.get('gridRenderer')
+        ?.getList('items');
+    if (playlistContents == null) {
+      return [];
+    }
+
+    List<Playlist> playlists = [];
+
+    for (var item in playlistContents) {
+      if (item['lockupViewModel'] != null) {
+        final viewModel = item.get('lockupViewModel')!;
+
+        final type = viewModel.getT<String>('contentType');
+        if (type != 'LOCKUP_CONTENT_TYPE_PLAYLIST') {
+          continue;
+        }
+
+        String? playlistId = viewModel.getT<String>('contentId');
+        String? title = viewModel
+            .getJson<String>('metadata/lockupMetadataViewModel/title/content');
+
+        //     final thumbnails = viewModel
+        //     .getJson<List<dynamic>>(
+        //         'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/image/sources')
+        //     ?.cast<Map<String, dynamic>>();
+        // List<Thumbnail> tht = thumbnails
+        //         ?.map((e) =>
+        //             Thumbnail(Uri.parse(e['url']), e['height'], e['width']))
+        //         .toList() ??
+        //     [];
+
+        int videoCount = viewModel
+                .getJson<String>(
+                    'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/overlays/0/thumbnailOverlayBadgeViewModel/thumbnailBadges/0/thumbnailBadgeViewModel/text')
+                ?.parseInt() ??
+            0;
+
+        final videoId = viewModel.getJson<String>(
+            'rendererContext/commandContext/onTap/innertubeCommand/watchEndpoint/videoId');
+
+        if (videoId == null ||
+            title == null ||
+            playlistId == null ||
+            videoId.isEmpty ||
+            title.isEmpty ||
+            playlistId.isEmpty) {
+          continue;
+        }
+
+        Playlist playlist = Playlist(
+          PlaylistId(playlistId),
+          title,
+          '',
+          '',
+          ThumbnailSet(videoId),
+          Engagement(videoCount, null, null),
+          videoCount,
+        );
+
+        playlists.add(playlist);
+      }
+    }
+
+    return playlists;
+  }
+
+  ///yfq 解析发布作品列表数据
+  List<Playlist> get releaseLists {
+    var playlistContents = rawMap
+        .get('contents')
+        ?.get('twoColumnBrowseResultsRenderer')
+        ?.getList('tabs')
+        ?.firstWhere((e) => e['tabRenderer']?['title'] == 'Releases',
+            orElse: () => {})
+        .get('tabRenderer')
+        ?.get('content')
+        ?.get('richGridRenderer')
+        ?.getList('contents');
+    if (playlistContents == null) {
+      return [];
+    }
+
+    List<Playlist> playlists = [];
+
+    for (var item in playlistContents) {
+      if (item['richItemRenderer'] != null) {
+        Map<String, dynamic>? playlistRenderer =
+            item.getJson<Map<String, dynamic>>(
+                'richItemRenderer/content/playlistRenderer');
+        if (playlistRenderer == null) {
+          continue;
+        }
+
+        String? playlistId = playlistRenderer.getT<String>('playlistId');
+        String? title = playlistRenderer.getJson<String>('title/simpleText');
+
+        //     final thumbnails = viewModel
+        //     .getJson<List<dynamic>>(
+        //         'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/image/sources')
+        //     ?.cast<Map<String, dynamic>>();
+        // List<Thumbnail> tht = thumbnails
+        //         ?.map((e) =>
+        //             Thumbnail(Uri.parse(e['url']), e['height'], e['width']))
+        //         .toList() ??
+        //     [];
+
+        int videoCount =
+            playlistRenderer.getT<String>('videoCount')?.parseInt() ?? 0;
+        String? author =
+            playlistRenderer.getJson<String>('shortBylineText/runs/0/text');
+
+        final videoId = playlistRenderer
+            .getJson<String>('videos/0/childVideoRenderer/videoId');
+
+        if (videoId == null ||
+            title == null ||
+            playlistId == null ||
+            videoId.isEmpty ||
+            title.isEmpty ||
+            playlistId.isEmpty) {
+          continue;
+        }
+
+        Playlist playlist = Playlist(
+          PlaylistId(playlistId),
+          title,
+          author ?? "",
+          '',
+          ThumbnailSet(videoId),
+          Engagement(videoCount, null, null),
+          videoCount,
+        );
+
+        playlists.add(playlist);
+      }
+    }
+
+    return playlists;
+  }
+
+  ///订阅数据
+  String? get subscribers {
+    List? rows = rawMap.getJson<List>(
+        'header/pageHeaderRenderer/content/pageHeaderViewModel/metadata/contentMetadataViewModel/metadataRows');
+    if (rows != null && rows.length > 1) {
+      if (rows[1] is Map<String, dynamic>) {
+        var list = (rows[1] as Map<String, dynamic>).getList("metadataParts");
+        if (list != null && list.isNotEmpty) {
+          String? value = list[0].get("text")?.getT<String>("content");
+          if (value != null && value.contains("subscribers")) {
+            return value;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  ///视频数
+  int? get videoCounts {
+    List? rows = rawMap.getJson<List>(
+        'header/pageHeaderRenderer/content/pageHeaderViewModel/metadata/contentMetadataViewModel/metadataRows');
+    if (rows != null && rows.length > 1) {
+      if (rows[1] is Map<String, dynamic>) {
+        var list = (rows[1] as Map<String, dynamic>).getList("metadataParts");
+        if (list != null && list.length > 1) {
+          String? value = list[1].get("text")?.getT<String>("content");
+          if (value != null && value.contains("videos")) {
+            value = value.replaceAll("videos", "");
+            int? count = int.tryParse(value);
+            if (count != null) {
+              return count;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  ///yfq修改---
 
   ///
   bool get isOk => root!.querySelector('meta[property="og:url"]') != null;
@@ -107,6 +306,38 @@ class ChannelPage extends YoutubePage<_InitialData> {
         }
       }
       throw FatalFailureException('', 0);
+    });
+  }
+
+  ///yfq 获取频道内歌单列表数据
+  static Future<List<Playlist>> getPlaylists(
+      YoutubeHttpClient httpClient, String id) {
+    final url = 'https://www.youtube.com/channel/$id/playlists?hl=en';
+
+    return retry(httpClient, () async {
+      final raw = await httpClient.getString(url);
+      final result = ChannelPage.parse(raw);
+
+      if (!result.isOk) {
+        throw TransientFailureException('Channel page is broken');
+      }
+      return result.playlists;
+    });
+  }
+
+  ///yfq 获取频道内发布作品列表数据
+  static Future<List<Playlist>> getReleaseLists(
+      YoutubeHttpClient httpClient, String id) {
+    final url = 'https://www.youtube.com/channel/$id/releases?hl=en';
+
+    return retry(httpClient, () async {
+      final raw = await httpClient.getString(url);
+      final result = ChannelPage.parse(raw);
+
+      if (!result.isOk) {
+        throw TransientFailureException('Channel page is broken');
+      }
+      return result.releaseLists;
     });
   }
 }

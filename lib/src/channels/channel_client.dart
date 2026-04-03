@@ -191,4 +191,20 @@ class ChannelClient {
       _httpClient,
     );
   }
+
+  ///yfq 增加频道内的歌单列表数据获取
+  Future<List<Playlist>> getPlaylistsFromChannel(dynamic channelId) async {
+    channelId = ChannelId.fromString(channelId);
+
+    return await ChannelPage.getPlaylists(
+        _httpClient, (channelId as ChannelId).value);
+  }
+
+  ///yfq 增加频道内的歌单列表数据获取
+  Future<List<Playlist>> getReleaseListsFromChannel(dynamic channelId) async {
+    channelId = ChannelId.fromString(channelId);
+
+    return await ChannelPage.getReleaseLists(
+        _httpClient, (channelId as ChannelId).value);
+  }
 }

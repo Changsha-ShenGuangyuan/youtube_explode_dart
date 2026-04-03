@@ -23,6 +23,10 @@ class SearchPage extends YoutubePage<_InitialData> {
   String channelIdForPlaylist(String playlistId) =>
       initialData.channelIdForPlaylist(playlistId);
 
+  ///yfq 通过 playlistId 获取作者名
+  String authorNameForPlaylist(String playlistId) =>
+      initialData.authorNameForPlaylist(playlistId);
+
   /// InitialData
   SearchPage.id(this.queryString, _InitialData initialData)
       : super.fromInitialData(initialData);
@@ -201,6 +205,49 @@ class _InitialData extends InitialData {
 
   /// yfq修改增加歌单获取频道id信息---
 
+  /// yfq修改增加歌单获取作者名信息
+  String getPlaylistAuthorName(
+    Map<String, dynamic> viewModel,
+  ) {
+    final metadataRows = viewModel.getJson<List<dynamic>>(
+      'metadata/lockupMetadataViewModel/metadata'
+      '/contentMetadataViewModel/metadataRows',
+    );
+    if (metadataRows == null) {
+      return '';
+    }
+
+    for (final row in metadataRows) {
+      if (row is! Map<String, dynamic>) continue;
+      if (row['isSpacerRow'] == true) continue;
+
+      final parts = row['metadataParts'];
+      if (parts is! List) continue;
+
+      for (final part in parts) {
+        if (part is! Map<String, dynamic>) continue;
+        final textMap = part.get('text');
+        if (textMap == null) continue;
+        final commandRuns =
+            textMap.getT<List<dynamic>>('commandRuns');
+        if (commandRuns == null) continue;
+
+        for (final run in commandRuns) {
+          if (run is! Map<String, dynamic>) continue;
+          final browseId = run.getJson<String>(
+            'onTap/innertubeCommand/browseEndpoint/browseId',
+          );
+          if (browseId != null && browseId.startsWith('UC')) {
+            return textMap.getT<String>('content') ?? '';
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  /// yfq修改增加歌单获取作者名信息---
+
   /// 通过 playlistId 从原始搜索数据中查找频道 ID
   String channelIdForPlaylist(String playlistId) {
     final contents = getContentContext();
@@ -221,6 +268,33 @@ class _InitialData extends InitialData {
           return renderer.getJson<String>(
                 'longBylineText/runs/0/navigationEndpoint'
                 '/browseEndpoint/browseId',
+              ) ??
+              '';
+        }
+      }
+    }
+    return '';
+  }
+
+  /// 通过 playlistId 从原始搜索数据中查找作者名
+  String authorNameForPlaylist(String playlistId) {
+    final contents = getContentContext();
+    if (contents == null) return '';
+
+    for (final content in contents) {
+      // lockupViewModel 类型
+      if (content['lockupViewModel'] != null) {
+        final viewModel = content.get('lockupViewModel')!;
+        if (viewModel.getT<String>('contentId') == playlistId) {
+          return getPlaylistAuthorName(viewModel);
+        }
+      }
+      // playlistRenderer 类型
+      if (content['playlistRenderer'] != null) {
+        final renderer = content.get('playlistRenderer')!;
+        if (renderer.getT<String>('playlistId') == playlistId) {
+          return renderer.getJson<String>(
+                'longBylineText/runs/0/text',
               ) ??
               '';
         }

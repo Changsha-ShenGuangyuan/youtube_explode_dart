@@ -9,6 +9,8 @@ export 'channel_client.dart';
 export 'channel_handle.dart';
 export 'channel_id.dart';
 export 'channel_link.dart';
+export 'channel_playlists_list.dart';
+export 'channel_releases_list.dart';
 export 'channel_uploads_list.dart';
 export 'channel_video.dart';
 export 'username.dart';

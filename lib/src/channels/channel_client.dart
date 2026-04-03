@@ -3,6 +3,8 @@ import '../extensions/helpers_extension.dart';
 import '../playlists/playlists.dart';
 import '../reverse_engineering/pages/channel_about_page.dart';
 import '../reverse_engineering/pages/channel_page.dart';
+import '../reverse_engineering/pages/channel_playlist_page.dart';
+import '../reverse_engineering/pages/channel_release_page.dart';
 import '../reverse_engineering/pages/channel_upload_page.dart';
 import '../reverse_engineering/pages/watch_page.dart';
 import '../reverse_engineering/youtube_http_client.dart';
@@ -200,11 +202,47 @@ class ChannelClient {
         _httpClient, (channelId as ChannelId).value);
   }
 
+  /// 获取频道 Playlists（带分页）。
+  /// 使用 [ChannelPlaylistsList.nextPage] 获取下一批数据。
+  Future<ChannelPlaylistsList> getPlaylistsFromPage(
+    dynamic channelId,
+  ) async {
+    channelId = ChannelId.fromString(channelId);
+    final page = await ChannelPlaylistPage.get(
+      _httpClient,
+      (channelId as ChannelId).value,
+    );
+    return ChannelPlaylistsList(
+      page.playlists,
+      channelId,
+      page,
+      _httpClient,
+    );
+  }
+
   ///yfq 增加频道内的歌单列表数据获取
   Future<List<Playlist>> getReleaseListsFromChannel(dynamic channelId) async {
     channelId = ChannelId.fromString(channelId);
 
     return await ChannelPage.getReleaseLists(
         _httpClient, (channelId as ChannelId).value);
+  }
+
+  /// 获取频道 Releases（带分页）。
+  /// 使用 [ChannelReleasesList.nextPage] 获取下一批数据。
+  Future<ChannelReleasesList> getReleaseListsFromPage(
+    dynamic channelId,
+  ) async {
+    channelId = ChannelId.fromString(channelId);
+    final page = await ChannelReleasePage.get(
+      _httpClient,
+      (channelId as ChannelId).value,
+    );
+    return ChannelReleasesList(
+      page.releases,
+      channelId,
+      page,
+      _httpClient,
+    );
   }
 }

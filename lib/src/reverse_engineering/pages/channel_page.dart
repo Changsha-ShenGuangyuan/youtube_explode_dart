@@ -109,6 +109,7 @@ class ChannelPage extends YoutubePage<_InitialData> {
 
   ///yfq 解析发布作品列表数据
   List<Playlist> get releaseLists {
+    // 1. 尝试标准 Releases tab (richGridRenderer/playlistRenderer)
     var playlistContents = rawMap
         .get('contents')
         ?.get('twoColumnBrowseResultsRenderer')
@@ -119,73 +120,188 @@ class ChannelPage extends YoutubePage<_InitialData> {
         ?.get('content')
         ?.get('richGridRenderer')
         ?.getList('contents');
-    if (playlistContents == null) {
-      return [];
+
+    if (playlistContents != null) {
+      final parsed = _parseReleaseFromPlaylistRenderer(playlistContents);
+      if (parsed.isNotEmpty) return parsed;
     }
 
+    // 2. 兼容 Topic 频道：Home tab 下 shelfRenderer 中的 lockupViewModel
+    final topicItems = _getTopicReleaseLockups();
+    if (topicItems.isNotEmpty) {
+      return _parseReleaseFromLockupViewModel(topicItems);
+    }
+
+    return [];
+  }
+
+  /// 从标准 Releases tab 的 playlistRenderer 解析专辑列表
+  List<Playlist> _parseReleaseFromPlaylistRenderer(
+      List<Map<String, dynamic>> contents) {
     List<Playlist> playlists = [];
 
-    for (var item in playlistContents) {
-      if (item['richItemRenderer'] != null) {
-        Map<String, dynamic>? playlistRenderer =
-            item.getJson<Map<String, dynamic>>(
-                'richItemRenderer/content/playlistRenderer');
-        if (playlistRenderer == null) {
-          continue;
-        }
+    for (var item in contents) {
+      if (item['richItemRenderer'] == null) continue;
 
-        String? playlistId = playlistRenderer.getT<String>('playlistId');
-        String? title = playlistRenderer.getJson<String>('title/simpleText');
+      Map<String, dynamic>? playlistRenderer =
+          item.getJson<Map<String, dynamic>>(
+              'richItemRenderer/content/playlistRenderer');
+      if (playlistRenderer == null) continue;
 
-        //     final thumbnails = viewModel
-        //     .getJson<List<dynamic>>(
-        //         'contentImage/collectionThumbnailViewModel/primaryThumbnail/thumbnailViewModel/image/sources')
-        //     ?.cast<Map<String, dynamic>>();
-        // List<Thumbnail> tht = thumbnails
-        //         ?.map((e) =>
-        //             Thumbnail(Uri.parse(e['url']), e['height'], e['width']))
-        //         .toList() ??
-        //     [];
+      String? playlistId = playlistRenderer.getT<String>('playlistId');
+      String? title =
+          playlistRenderer.getJson<String>('title/simpleText');
 
-        final playlistThumbnails = playlistRenderer
-            .getJson<List<dynamic>>('thumbnails/0/thumbnails')
-            ?.cast<Map<String, dynamic>>()
-            .map((e) => Thumbnail(
-                Uri.parse(e['url'] as String),
-                e['height'] as int,
-                e['width'] as int))
-            .toList();
+      final playlistThumbnails = playlistRenderer
+          .getJson<List<dynamic>>('thumbnails/0/thumbnails')
+          ?.cast<Map<String, dynamic>>()
+          .map((e) => Thumbnail(
+              Uri.parse(e['url'] as String),
+              e['height'] as int,
+              e['width'] as int))
+          .toList();
 
-        int videoCount =
-            playlistRenderer.getT<String>('videoCount')?.parseInt() ?? 0;
-        String? author =
-            playlistRenderer.getJson<String>('shortBylineText/runs/0/text');
+      int videoCount =
+          playlistRenderer.getT<String>('videoCount')?.parseInt() ?? 0;
+      String? author =
+          playlistRenderer.getJson<String>('shortBylineText/runs/0/text');
 
-        final videoId = playlistRenderer
-            .getJson<String>('videos/0/childVideoRenderer/videoId');
+      final videoId = playlistRenderer
+          .getJson<String>('videos/0/childVideoRenderer/videoId');
 
-        if (videoId == null ||
-            title == null ||
-            playlistId == null ||
-            videoId.isEmpty ||
-            title.isEmpty ||
-            playlistId.isEmpty) {
-          continue;
-        }
-
-        Playlist playlist = Playlist(
-          PlaylistId(playlistId),
-          title,
-          author ?? "",
-          '',
-          ThumbnailSet(videoId),
-          Engagement(videoCount, null, null),
-          videoCount,
-          playlistThumbnails: playlistThumbnails,
-        );
-
-        playlists.add(playlist);
+      if (videoId == null ||
+          title == null ||
+          playlistId == null ||
+          videoId.isEmpty ||
+          title.isEmpty ||
+          playlistId.isEmpty) {
+        continue;
       }
+
+      playlists.add(Playlist(
+        PlaylistId(playlistId),
+        title,
+        author ?? '',
+        '',
+        ThumbnailSet(videoId),
+        Engagement(videoCount, null, null),
+        videoCount,
+        playlistThumbnails: playlistThumbnails,
+      ));
+    }
+
+    return playlists;
+  }
+
+  /// 从 Topic 频道主页 Home tab 的 shelfRenderer 中提取
+  /// lockupViewModel 列表（Albums & Singles）
+  List<Map<String, dynamic>> _getTopicReleaseLockups() {
+    final tabs = rawMap
+        .get('contents')
+        ?.get('twoColumnBrowseResultsRenderer')
+        ?.getList('tabs');
+    if (tabs == null) return [];
+
+    // 遍历所有 tab，优先查找 Home/featured tab
+    for (final tab in tabs) {
+      final sections = tab
+          .get('tabRenderer')
+          ?.get('content')
+          ?.get('sectionListRenderer')
+          ?.getList('contents');
+      if (sections == null) continue;
+
+      for (final section in sections) {
+        final shelf =
+            section.get('itemSectionRenderer')?.getList('contents');
+        if (shelf == null) continue;
+
+        for (final shelfItem in shelf) {
+          final items = shelfItem
+              .get('shelfRenderer')
+              ?.get('content')
+              ?.get('horizontalListRenderer')
+              ?.getList('items');
+          if (items == null || items.isEmpty) continue;
+
+          // 检查第一个 item 是否是 ALBUM 类型的 lockupViewModel
+          final firstType = items.first
+              .get('lockupViewModel')
+              ?.getT<String>('contentType');
+          if (firstType == 'LOCKUP_CONTENT_TYPE_ALBUM') {
+            return items;
+          }
+        }
+      }
+    }
+    return [];
+  }
+
+  /// 从 lockupViewModel 格式解析专辑数据（Topic 频道使用此格式）
+  List<Playlist> _parseReleaseFromLockupViewModel(
+      List<Map<String, dynamic>> items) {
+    List<Playlist> playlists = [];
+
+    for (var item in items) {
+      final viewModel = item.get('lockupViewModel');
+      if (viewModel == null) continue;
+
+      final type = viewModel.getT<String>('contentType');
+      if (type != 'LOCKUP_CONTENT_TYPE_ALBUM') continue;
+
+      String? playlistId = viewModel.getT<String>('contentId');
+      String? title = viewModel.getJson<String>(
+          'metadata/lockupMetadataViewModel/title/content');
+
+      final playlistThumbnails = viewModel
+          .getJson<List<dynamic>>(
+              'contentImage/collectionThumbnailViewModel/'
+              'primaryThumbnail/thumbnailViewModel/image/sources')
+          ?.cast<Map<String, dynamic>>()
+          .map((e) => Thumbnail(
+              Uri.parse(e['url'] as String),
+              e['height'] as int,
+              e['width'] as int))
+          .toList();
+
+      // 从 badge 提取歌曲数量，格式如 "8 songs"
+      int videoCount = viewModel
+              .getJson<String>(
+                  'contentImage/collectionThumbnailViewModel/'
+                  'primaryThumbnail/thumbnailViewModel/overlays/0/'
+                  'thumbnailOverlayBadgeViewModel/thumbnailBadges/0/'
+                  'thumbnailBadgeViewModel/text')
+              ?.parseInt() ??
+          0;
+
+      // 提取作者名
+      String? author = viewModel.getJson<String>(
+          'metadata/lockupMetadataViewModel/metadata/'
+          'contentMetadataViewModel/metadataRows/0/'
+          'metadataParts/0/text/content');
+
+      // 从 watchEndpoint 提取首个视频 ID
+      final videoId = viewModel.getJson<String>(
+          'rendererContext/commandContext/onTap/'
+          'innertubeCommand/watchEndpoint/videoId');
+
+      if (title == null ||
+          playlistId == null ||
+          title.isEmpty ||
+          playlistId.isEmpty) {
+        continue;
+      }
+
+      playlists.add(Playlist(
+        PlaylistId(playlistId),
+        title,
+        author ?? '',
+        '',
+        ThumbnailSet(videoId ?? ''),
+        Engagement(videoCount, null, null),
+        videoCount,
+        playlistThumbnails: playlistThumbnails,
+      ));
     }
 
     return playlists;

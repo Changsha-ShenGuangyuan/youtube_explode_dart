@@ -109,6 +109,12 @@ class _InitialData extends InitialData {
               render.get('richGridRenderer')?.getList('contents') ?? const [];
         }
       }
+
+      // Fallback: Topic/Artist channels use lockupViewModel
+      // inside shelfRenderer on the Home tab.
+      if (context == null || context.isEmpty) {
+        context = _getTopicVideoLockups();
+      }
     }
     if (context == null && root.containsKey('onResponseReceivedActions')) {
       context = root
@@ -124,18 +130,98 @@ class _InitialData extends InitialData {
     return context;
   }
 
-  JsonMap? getContinuationContext() {
-    final continuationItemRenderer = getContentContext()
-        .firstWhereOrNull((e) => e['continuationItemRenderer'] != null)
-        ?.get('continuationItemRenderer');
-    if (continuationItemRenderer != null) {
-      final command = continuationItemRenderer
-          .get('continuationEndpoint')
-          ?.get('continuationCommand');
-      if (command != null) {
-        return command;
+  //yfq---
+  /// Extracts lockupViewModel video items from Topic/Artist
+  /// channel's Home tab shelfRenderer sections.
+  ///
+  /// Topic channels (e.g. music artist channels) don't have
+  /// a dedicated Videos tab with data pre-loaded. Instead, the
+  /// Home tab contains shelfRenderers with horizontalListRenderer
+  /// items using lockupViewModel with contentType
+  /// LOCKUP_CONTENT_TYPE_VIDEO.
+  List<JsonMap> _getTopicVideoLockups() {
+    if (!root.containsKey('contents')) {
+      return const [];
+    }
+
+    final tabs = root
+        .get('contents')
+        ?.get('twoColumnBrowseResultsRenderer')
+        ?.getList('tabs');
+    if (tabs == null) return const [];
+
+    // Collect all lockupViewModel video items from all
+    // shelfRenderer sections.
+    final List<JsonMap> result = [];
+
+    for (final tab in tabs) {
+      final tr = tab.get('tabRenderer');
+      if (tr == null) continue;
+      // Only process the selected tab (typically Home).
+      if (!(tr.getT<bool>('selected') ?? false)) continue;
+
+      final sections =
+          tr.get('content')?.get('sectionListRenderer')?.getList('contents');
+      if (sections == null) continue;
+
+      for (final section in sections) {
+        final isr = section.get('itemSectionRenderer')?.getList('contents');
+        if (isr == null) continue;
+
+        for (final content in isr) {
+          if (!content.containsKey('shelfRenderer')) continue;
+
+          final items = content
+              .get('shelfRenderer')
+              ?.get('content')
+              ?.get('horizontalListRenderer')
+              ?.getList('items');
+          if (items == null || items.isEmpty) continue;
+
+          // Check if items are videos (not stations, albums, etc.)
+          final firstType =
+              items.first.get('lockupViewModel')?.getT<String>('contentType');
+          if (firstType != 'LOCKUP_CONTENT_TYPE_VIDEO') continue;
+
+          for (final item in items) {
+            if (item.containsKey('lockupViewModel')) {
+              result.add(item);
+            }
+          }
+        }
       }
     }
+
+    return result;
+  }
+
+//---yfq--end
+  JsonMap? getContinuationContext() {
+    // Avoid re-entering _getTopicVideoLockups when content
+    // came from the topic fallback (no continuation for topic
+    // video shelves).
+    List<JsonMap>? stdContext;
+    try {
+      stdContext = _getStandardContentContext();
+    } catch (_) {
+      // Standard context not available — will use topic fallback
+      // which has no continuation support.
+    }
+
+    if (stdContext != null && stdContext.isNotEmpty) {
+      final continuationItemRenderer = stdContext
+          .firstWhereOrNull((e) => e['continuationItemRenderer'] != null)
+          ?.get('continuationItemRenderer');
+      if (continuationItemRenderer != null) {
+        final command = continuationItemRenderer
+            .get('continuationEndpoint')
+            ?.get('continuationCommand');
+        if (command != null) {
+          return command;
+        }
+      }
+    }
+
     if (root.containsKey('contents')) {
       return root
           .get('contents')
@@ -172,6 +258,57 @@ class _InitialData extends InitialData {
     return null;
   }
 
+  //---yfq
+  /// Gets standard content context without topic fallback
+  /// to avoid infinite recursion between
+  /// getContentContext <-> getContinuationContext.
+  List<JsonMap>? _getStandardContentContext() {
+    if (root.containsKey('contents')) {
+      var render = root
+          .get('contents')
+          ?.get('twoColumnBrowseResultsRenderer')
+          ?.getList('tabs')
+          ?.map((e) => e['tabRenderer'])
+          .cast<JsonMap>()
+          .firstWhereOrNull((e) => e['selected'] as bool? ?? false)
+          ?.get('content');
+
+      if (render != null) {
+        if (render.containsKey('sectionListRenderer')) {
+          render = render
+              .get('sectionListRenderer')
+              ?.getList('contents')
+              ?.firstOrNull
+              ?.get('itemSectionRenderer')
+              ?.getList('contents')
+              ?.firstOrNull;
+
+          if (render?.containsKey('gridRenderer') ?? false) {
+            return render
+                ?.get('gridRenderer')
+                ?.getList('items')
+                ?.cast<JsonMap>();
+          }
+        } else if (render.containsKey('richGridRenderer')) {
+          return render
+              .get('richGridRenderer')
+              ?.getList('contents')
+              ?.cast<JsonMap>();
+        }
+      }
+    }
+    if (root.containsKey('onResponseReceivedActions')) {
+      return root
+          .getList('onResponseReceivedActions')
+          ?.firstOrNull
+          ?.get('appendContinuationItemsAction')
+          ?.getList('continuationItems')
+          ?.cast<JsonMap>();
+    }
+    return null;
+  }
+
+//---yfq
   ChannelVideo? _parseContent(JsonMap? content) {
     if (content == null) {
       return null;
@@ -181,10 +318,8 @@ class _InitialData extends InitialData {
     if (content.containsKey('gridVideoRenderer')) {
       video = content.get('gridVideoRenderer');
     } else if (content.containsKey('richItemRenderer')) {
-      video = content
-          .get('richItemRenderer')
-          ?.get('content')
-          ?.get(type.youtubeRenderText);
+      final richContent = content.get('richItemRenderer')?.get('content');
+      video = richContent?.get(type.youtubeRenderText);
       if (type == VideoType.shorts && video != null) {
         return ChannelVideo(
             VideoId(video.getJson<String>(
@@ -197,6 +332,20 @@ class _InitialData extends InitialData {
                 .getJson<String>('overlayMetadata/secondaryText/content')!
                 .parseInt()!);
       }
+      //---yfq
+      // Fallback: new YouTube format uses lockupViewModel
+      // inside richItemRenderer.content instead of
+      // videoRenderer.
+      if (video == null && richContent != null) {
+        final lockup = richContent.get('lockupViewModel');
+        if (lockup != null) {
+          return _parseLockupViewModel(lockup);
+        }
+      }
+    } else if (content.containsKey('lockupViewModel')) {
+      // New format used by Topic/Artist channels.
+      return _parseLockupViewModel(content.get('lockupViewModel')!);
+      //---yfq--end
     }
 
     if (video == null) {
@@ -219,6 +368,105 @@ class _InitialData extends InitialData {
           '',
       video.get('publishedTimeText')?.getT<String>('simpleText') ?? '',
       video.get('viewCountText')?.getT<String>('simpleText').parseInt() ?? 0,
+    );
+  }
+
+  //yfq
+  /// Parses a lockupViewModel item with
+  /// contentType == LOCKUP_CONTENT_TYPE_VIDEO into
+  /// a [ChannelVideo].
+  ///
+  /// Structure:
+  /// - contentId → videoId
+  /// - metadata.lockupMetadataViewModel.title.content → title
+  /// - contentImage.thumbnailViewModel.overlays[0]
+  ///     .thumbnailBottomOverlayViewModel.badges[0]
+  ///     .thumbnailBadgeViewModel.text → duration (e.g. "4:27")
+  /// - contentImage.thumbnailViewModel.image.sources → thumbnails
+  /// - metadata.lockupMetadataViewModel.metadata
+  ///     .contentMetadataViewModel.metadataRows → views, upload date
+  ChannelVideo? _parseLockupViewModel(JsonMap viewModel) {
+    final contentType = viewModel.getT<String>('contentType');
+    if (contentType != 'LOCKUP_CONTENT_TYPE_VIDEO') {
+      return null;
+    }
+
+    final String? videoId = viewModel.getT<String>('contentId');
+    if (videoId == null || videoId.isEmpty) {
+      return null;
+    }
+
+    // Title
+    final String title = viewModel.getJson<String>(
+            'metadata/lockupMetadataViewModel/title/content') ??
+        '';
+
+    // Duration from thumbnail badge
+    final String durationText =
+        viewModel.getJson<String>('contentImage/thumbnailViewModel/overlays/0/'
+                'thumbnailBottomOverlayViewModel/badges/0/'
+                'thumbnailBadgeViewModel/text') ??
+            '';
+
+    // Thumbnail URL: last source for highest resolution
+    final thumbnailSources = viewModel.getJson<List<dynamic>>(
+        'contentImage/thumbnailViewModel/image/sources');
+    final String thumbnailUrl = (thumbnailSources != null &&
+            thumbnailSources.isNotEmpty)
+        ? (thumbnailSources.last as Map<String, dynamic>)['url'] as String? ??
+            ''
+        : '';
+
+    // Metadata rows contain artist, view count, upload date
+    final metadataRows = viewModel
+        .getJson<List<dynamic>>('metadata/lockupMetadataViewModel/metadata/'
+            'contentMetadataViewModel/metadataRows');
+
+    String uploadDate = '';
+    int viewCount = 0;
+
+    if (metadataRows != null) {
+      for (final row in metadataRows) {
+        final parts =
+            (row as Map<String, dynamic>)['metadataParts'] as List<dynamic>?;
+        if (parts == null) continue;
+        for (final part in parts) {
+          final text =
+              (part as Map<String, dynamic>).getJson<String>('text/content') ??
+                  '';
+          if (text.isEmpty) continue;
+
+          // Detect upload date first (e.g. "13 days ago",
+          // "2 months ago").
+          if (text.contains('ago')) {
+            uploadDate = text;
+            continue;
+          }
+
+          // Detect view count: handles both formats:
+          // - "6.3M views" (live response)
+          // - "6.3M" (compact format)
+          if (text.contains('view')) {
+            // Format: "6.3M views" or "5 views"
+            viewCount = text.parseViewCount() ?? 0;
+          } else if (!text.contains(' ')) {
+            // Compact format: "6.3M", "1.5K", "500"
+            final parsed = text.parseIntWithUnits();
+            if (parsed != null && parsed > 0) {
+              viewCount = parsed;
+            }
+          }
+        }
+      }
+    }
+
+    return ChannelVideo(
+      VideoId(videoId),
+      title,
+      durationText.toDuration() ?? Duration.zero,
+      thumbnailUrl,
+      uploadDate,
+      viewCount,
     );
   }
 }
